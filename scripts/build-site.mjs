@@ -247,6 +247,31 @@ ${links}
 `;
 }
 
+function buildLangSelectorHtml(languages, currentCode) {
+  const options = languages
+    .map((l) => {
+      const selected = l.code === currentCode ? ' selected' : '';
+      return `<option value="droptables-${l.code}.html"${selected}>${l.nativeName}</option>`;
+    })
+    .join('');
+
+  // 保持极简，不引入额外 CSS；只插入一个普通块
+  return [
+    '<div style="margin-bottom: 12pt;">',
+    '<label for="wf-lang"><b>Language / 语言：</b></label> ',
+    `<select id="wf-lang" onchange="location.href=this.value">${options}</select>`,
+    '</div>',
+  ].join('');
+}
+
+function injectLangSelector(html, languages, currentCode) {
+  const bodyOpenIdx = html.indexOf('<body>');
+  if (bodyOpenIdx === -1) return html;
+  const insertAt = bodyOpenIdx + '<body>'.length;
+  const selector = '\n' + buildLangSelectorHtml(languages, currentCode) + '\n';
+  return html.slice(0, insertAt) + selector + html.slice(insertAt);
+}
+
 async function loadJson(filePath) {
   const raw = await fs.readFile(filePath, 'utf8');
   return JSON.parse(raw);
@@ -279,6 +304,7 @@ export async function buildSite({ repoRoot = process.cwd(), outputDir = 'site' }
     const outPath = path.join(outDirAbs, `droptables-${code}.html`);
 
     let html = htmlEn.replace('<html lang="en">', `<html lang="${code}">`);
+    html = injectLangSelector(html, languages, code);
     if (code === 'en') {
       await fs.writeFile(outPath, html, 'utf8');
       continue;
